@@ -388,6 +388,172 @@ Different agents use different argument placeholders:
 3. **File generation**: Verify correct directory structure and files
 4. **Command validation**: Ensure generated commands work with the agent
 5. **Context update**: Test agent context update scripts
+6. **Validation check**: Run `specify validate` to ensure standards compliance
+
+## Agent Configuration Validation
+
+The Specify CLI includes a comprehensive validation system to ensure all AI agent configurations follow proper standards. This validation runs automatically during initial setup and can be triggered manually at any time.
+
+### Validation Command
+
+```bash
+# Validate current project
+specify validate
+
+# Validate specific project
+specify validate ./path/to/project
+
+# Show detailed validation output
+specify validate --verbose
+```
+
+### What Gets Validated
+
+The validation system performs comprehensive checks across all detected AI agents:
+
+#### 1. Directory Structure Validation
+- Verifies agent-specific folder exists (e.g., `.claude/`, `.gemini/`, `.cursor/`)
+- Checks for required subdirectories based on agent type:
+  - **CLI agents**: `commands/` directory
+  - **Copilot**: `agents/` and `prompts/` directories
+  - **IDE agents**: `rules/` and `workflows/` directories
+- Ensures directory naming follows agent-specific conventions
+
+#### 2. Command File Format Validation
+- **Markdown format** (Claude, Cursor, opencode, Windsurf, etc.):
+  - YAML frontmatter starts with `---`
+  - Required `description:` field present
+  - Script placeholders (`{SCRIPT}`) used correctly
+  - Argument placeholders (`$ARGUMENTS`) in proper format
+- **TOML format** (Gemini, Qwen):
+  - Required `description =` field present
+  - Required `prompt =` field present
+  - Proper argument format (`{{args}}` not `$ARGUMENTS`)
+- **Copilot format**:
+  - YAML frontmatter with `mode:` field
+  - Agent.md file naming convention
+  - Companion prompt files in `.github/prompts/`
+
+#### 3. Context File Validation
+- Checks for agent-specific context files:
+  - `CLAUDE.md`, `GEMINI.md`, `QWEN.md`, etc.
+  - `.cursor/rules/specify-rules.mdc`
+  - `.windsurf/rules/specify-rules.md`
+  - `.github/agents/copilot-instructions.md`
+- Validates manual additions markers:
+  - `<!-- MANUAL ADDITIONS START -->` has matching `<!-- MANUAL ADDITIONS END -->`
+- Checks for unreplaced placeholders:
+  - `[PROJECT NAME]` should be replaced with actual project name
+  - `[DATE]` should be replaced with actual date
+- Verifies required sections exist (Active Technologies, Project Structure, etc.)
+
+#### 4. Required Commands Check
+Ensures all essential spec-kit commands are present:
+- `specify` - Create/update feature specifications
+- `plan` - Execute implementation planning
+- `tasks` - Generate actionable tasks
+- `implement` - Execute implementation
+- `constitution` - Establish project principles
+- `clarify` - Clarify specification requirements
+- `analyze` - Cross-artifact consistency analysis
+- `checklist` - Generate quality checklists
+
+#### 5. Standards Compliance
+- File extensions match agent requirements
+- Command naming follows conventions
+- Content structure adheres to templates
+- Integration patterns follow best practices
+
+### Validation Output
+
+The validation command provides clear, actionable feedback:
+
+**Success (No Issues)**:
+```
+✓ All agent configurations are valid!
+No issues or warnings found.
+```
+
+**With Warnings**:
+```
+Validation Summary
+┏━━━━━━━━━━┳━━━━━━━┓
+┃ Category ┃ Count ┃
+┡━━━━━━━━━━╇━━━━━━━┩
+│ Errors   │   0   │
+│ Warnings │   3   │
+└──────────┴───────┘
+
+Warnings:
+Claude Code (claude):
+  ⚠ [commands] Missing expected spec-kit commands: taskstoissues
+```
+
+**With Errors**:
+```
+Validation Summary
+┏━━━━━━━━━━┳━━━━━━━┓
+┃ Category ┃ Count ┃
+┡━━━━━━━━━━╇━━━━━━━┩
+│ Errors   │   2   │
+│ Warnings │   1   │
+└──────────┴───────┘
+
+Errors Found:
+Gemini CLI (gemini):
+  ✗ [format] Missing 'description =' field in TOML file
+    File: .gemini/commands/plan.toml
+  ✗ [structure] Expected commands directory not found: .gemini/commands
+```
+
+### Integration with Project Setup
+
+The validation system is designed to work seamlessly with project initialization:
+
+1. **During `specify init`**: Agent configurations are created from validated templates
+2. **After manual changes**: Run `specify validate` to ensure compliance
+3. **Before deployment**: Include validation in CI/CD pipelines
+4. **Post-updates**: Verify agent files after script updates
+
+### Best Practices
+
+1. **Run validation after any manual changes** to agent configuration files
+2. **Address errors immediately** - they indicate broken configurations
+3. **Review warnings** - they suggest improvements but don't break functionality
+4. **Include in CI/CD** - Add `specify validate` to automated checks
+5. **Validate before commits** - Catch issues early in development workflow
+
+### Extending Validation
+
+When adding new agents or standards:
+
+1. Update `AGENT_CONFIG` in `src/specify_cli/data/constants.py`
+2. Add agent-specific validation rules in `src/specify_cli/backend/validation.py`
+3. Update detection logic in `_detect_agents()` method
+4. Add format-specific validators as needed
+5. Update this documentation with new validation rules
+
+### Common Validation Issues and Fixes
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Missing YAML frontmatter | Markdown file doesn't start with `---` | Add frontmatter: `---\ndescription: ...\n---` |
+| Wrong argument format | Using `$ARGUMENTS` in TOML | Change to `{{args}}` for TOML files |
+| Missing commands directory | Agent folder incomplete | Create required subdirectory (e.g., `.claude/commands/`) |
+| Unreplaced placeholders | Template not fully processed | Replace `[PROJECT NAME]` and `[DATE]` with actual values |
+| Missing spec-kit commands | Incomplete project setup | Regenerate project with `specify init` or add missing files |
+| Invalid TOML format | Syntax errors in TOML files | Check for missing quotes, equals signs, or multiline strings |
+
+### Validation Error Codes
+
+| Category | Severity | Description |
+|----------|----------|-------------|
+| `structure` | Error | Directory structure doesn't follow conventions |
+| `format` | Error | File format doesn't match requirements (YAML, TOML) |
+| `content` | Warning | Content issues (missing placeholders, etc.) |
+| `commands` | Warning | Missing or incomplete command files |
+| `context` | Warning | Context file issues (placeholders, sections) |
+| `detection` | Warning | No agent configurations found |
 
 ## Common Pitfalls
 
@@ -397,6 +563,7 @@ Different agents use different argument placeholders:
 4. **Wrong argument format**: Use correct placeholder format for each agent type (`$ARGUMENTS` for Markdown, `{{args}}` for TOML).
 5. **Directory naming**: Follow agent-specific conventions exactly (check existing agents for patterns).
 6. **Help text inconsistency**: Update all user-facing text consistently (help strings, docstrings, README, error messages).
+7. **Skipping validation**: Always run `specify validate` after making changes to agent configurations to catch issues early.
 
 ## Future Considerations
 

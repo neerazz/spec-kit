@@ -13,12 +13,13 @@ from rich.align import Align
 from typer.core import TyperGroup
 from datetime import datetime
 
-from specify_cli.data.constants import AGENT_CONFIG, SCRIPT_TYPE_CHOICES
+from specify_cli.data.constants import AGENT_CONFIG, SCRIPT_TYPE_CHOICES, ALL_AGENTS_KEY
 from specify_cli.frontend.ui import show_banner, console, select_with_arrows, StepTracker
 from specify_cli.backend.system import check_tool, ensure_executable_scripts
 from specify_cli.backend.git import is_git_repo, init_git_repo
 from specify_cli.backend.project import download_and_extract_template
 from specify_cli.backend.github import _github_auth_headers
+from specify_cli.backend.validation import validate_agent_standards
 
 class BannerGroup(TyperGroup):
     """Custom group that shows banner before help."""
@@ -47,7 +48,7 @@ def callback(ctx: typer.Context):
 @app.command()
 def init(
     project_name: str = typer.Argument(None, help="Name for your new project directory (optional if using --here, or use '.' for current directory)"),
-    ai_assistant: str = typer.Option(None, "--ai", help="AI assistant to use: claude, gemini, copilot, cursor-agent, qwen, opencode, codex, windsurf, kilocode, auggie, codebuddy, amp, shai, q, bob, or qoder "),
+    ai_assistant: str = typer.Option(None, "--ai", help="AI assistant: all (ALL agents), claude, gemini, copilot, cursor-agent, qwen, opencode, codex, windsurf, kilocode, auggie, codebuddy, amp, shai, q, bob, or qoder"),
     script_type: str = typer.Option(None, "--script", help="Script type to use: sh or ps"),
     ignore_agent_tools: bool = typer.Option(False, "--ignore-agent-tools", help="Skip checks for AI agent tools like Claude Code"),
     no_git: bool = typer.Option(False, "--no-git", help="Skip git repository initialization"),
@@ -62,7 +63,7 @@ def init(
 
     This command will:
     1. Check that required tools are installed (git is optional)
-    2. Let you choose your AI assistant
+    2. Let you choose your AI assistant (or 'all' for ALL agents)
     3. Download the appropriate template from GitHub
     4. Extract the template to a new project directory or current directory
     5. Initialize a fresh git repository (if not --no-git and no existing repo)
@@ -70,11 +71,14 @@ def init(
 
     Examples:
         specify init my-project
+        specify init my-project --ai all           # Initialize with ALL AI agents
         specify init my-project --ai claude
         specify init my-project --ai copilot --no-git
         specify init --ignore-agent-tools my-project
+        specify init . --ai all            # Initialize in current directory with ALL agents
         specify init . --ai claude         # Initialize in current directory
         specify init .                     # Initialize in current directory (interactive AI selection)
+        specify init --here --ai all       # Alternative syntax for current directory with ALL agents
         specify init --here --ai claude    # Alternative syntax for current directory
         specify init --here --ai codex
         specify init --here --ai codebuddy
@@ -159,7 +163,8 @@ def init(
             "copilot"
         )
 
-    if not ignore_agent_tools:
+    # Skip agent tool checks when initializing all agents (no single tool to check)
+    if not ignore_agent_tools and selected_ai != ALL_AGENTS_KEY:
         agent_config = AGENT_CONFIG.get(selected_ai)
         if agent_config and agent_config["requires_cli"]:
             install_url = agent_config["install_url"]
@@ -290,18 +295,39 @@ def init(
         console.print(git_error_panel)
 
     # Agent folder security notice
-    agent_config = AGENT_CONFIG.get(selected_ai)
-    if agent_config:
-        agent_folder = agent_config["folder"]
+    if selected_ai == ALL_AGENTS_KEY:
+        # List all agent folders when "all" is selected
+        agent_folders = [config["folder"] for key, config in AGENT_CONFIG.items() 
+                        if key != ALL_AGENTS_KEY and config["folder"]]
+        unique_folders = sorted(set(agent_folders))
+        folder_list = ", ".join([f"[cyan]{f}[/cyan]" for f in unique_folders[:5]])
+        if len(unique_folders) > 5:
+            folder_list += f", and {len(unique_folders) - 5} more"
+        
         security_notice = Panel(
-            f"Some agents may store credentials, auth tokens, or other identifying and private artifacts in the agent folder within your project.\n"
-            f"Consider adding [cyan]{agent_folder}[/cyan] (or parts of it) to [cyan].gitignore[/cyan] to prevent accidental credential leakage.",
+            f"[bold green]All AI agents initialized![/bold green]\n\n"
+            f"Some agents may store credentials, auth tokens, or other identifying and private artifacts.\n"
+            f"Agent folders include: {folder_list}\n\n"
+            f"Consider reviewing these folders and adding sensitive paths to [cyan].gitignore[/cyan].",
             title="[yellow]Agent Folder Security[/yellow]",
             border_style="yellow",
             padding=(1, 2)
         )
         console.print()
         console.print(security_notice)
+    else:
+        agent_config = AGENT_CONFIG.get(selected_ai)
+        if agent_config and agent_config["folder"]:
+            agent_folder = agent_config["folder"]
+            security_notice = Panel(
+                f"Some agents may store credentials, auth tokens, or other identifying and private artifacts in the agent folder within your project.\n"
+                f"Consider adding [cyan]{agent_folder}[/cyan] (or parts of it) to [cyan].gitignore[/cyan] to prevent accidental credential leakage.",
+                title="[yellow]Agent Folder Security[/yellow]",
+                border_style="yellow",
+                padding=(1, 2)
+            )
+            console.print()
+            console.print(security_notice)
 
     steps_lines = []
     if not here:
@@ -311,8 +337,8 @@ def init(
         steps_lines.append("1. You're already in the project directory!")
         step_num = 2
 
-    # Add Codex-specific setup step if needed
-    if selected_ai == "codex":
+    # Add Codex-specific setup step if needed (for individual codex or all agents)
+    if selected_ai == "codex" or selected_ai == ALL_AGENTS_KEY:
         codex_path = project_path / ".codex"
         quoted_path = shlex.quote(str(codex_path))
         if os.name == "nt":  # Windows
@@ -320,10 +346,16 @@ def init(
         else:  # Unix-like systems
             cmd = f"export CODEX_HOME={quoted_path}"
 
-        steps_lines.append(f"{step_num}. Set [cyan]CODEX_HOME[/cyan] environment variable before running Codex: [cyan]{cmd}[/cyan]")
+        if selected_ai == ALL_AGENTS_KEY:
+            steps_lines.append(f"{step_num}. [dim](For Codex users)[/dim] Set [cyan]CODEX_HOME[/cyan]: [cyan]{cmd}[/cyan]")
+        else:
+            steps_lines.append(f"{step_num}. Set [cyan]CODEX_HOME[/cyan] environment variable before running Codex: [cyan]{cmd}[/cyan]")
         step_num += 1
 
-    steps_lines.append(f"{step_num}. Start using slash commands with your AI agent:")
+    if selected_ai == ALL_AGENTS_KEY:
+        steps_lines.append(f"{step_num}. Use slash commands with [bold]any[/bold] of your preferred AI agents:")
+    else:
+        steps_lines.append(f"{step_num}. Start using slash commands with your AI agent:")
 
     steps_lines.append("   2.1 [cyan]/speckit.constitution[/] - Establish project principles")
     steps_lines.append("   2.2 [cyan]/speckit.specify[/] - Create baseline specification")
@@ -470,6 +502,133 @@ def version():
 
     console.print(panel)
     console.print()
+
+@app.command()
+def validate(
+    project_dir: str = typer.Argument(".", help="Project directory to validate (defaults to current directory)"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Show detailed validation results"),
+):
+    """
+    Validate all AI agent configurations in a project.
+    
+    This command checks all detected AI agent configurations to ensure they
+    follow proper standards and best practices:
+    
+    - Directory structure follows agent-specific conventions
+    - Command files use correct format (Markdown vs TOML)
+    - Required spec-kit commands are present
+    - Context files are properly configured
+    - File formats match agent requirements
+    
+    Examples:
+        specify validate                    # Validate current directory
+        specify validate ./my-project       # Validate specific project
+        specify validate --verbose          # Show detailed results
+    """
+    show_banner()
+    
+    project_path = Path(project_dir).resolve()
+    
+    if not project_path.exists():
+        console.print(f"[red]Error:[/red] Project directory not found: {project_path}")
+        raise typer.Exit(1)
+    
+    if not project_path.is_dir():
+        console.print(f"[red]Error:[/red] Not a directory: {project_path}")
+        raise typer.Exit(1)
+    
+    console.print(f"[cyan]Validating AI agent configurations in:[/cyan] {project_path}")
+    console.print()
+    
+    # Run validation
+    success, issues, warnings = validate_agent_standards(project_path, AGENT_CONFIG)
+    
+    # Display results
+    if not issues and not warnings:
+        console.print("[bold green]✓ All agent configurations are valid![/bold green]")
+        console.print()
+        console.print("[dim]No issues or warnings found.[/dim]")
+        return
+    
+    # Create summary table
+    summary_table = Table(title="Validation Summary", show_header=True, header_style="bold cyan")
+    summary_table.add_column("Category", style="cyan")
+    summary_table.add_column("Count", justify="right")
+    
+    summary_table.add_row("Errors", f"[red]{len(issues)}[/red]" if issues else "[green]0[/green]")
+    summary_table.add_row("Warnings", f"[yellow]{len(warnings)}[/yellow]" if warnings else "[green]0[/green]")
+    
+    console.print(summary_table)
+    console.print()
+    
+    # Display issues
+    if issues:
+        console.print("[bold red]Errors Found:[/bold red]")
+        console.print()
+        
+        # Group by agent
+        issues_by_agent = {}
+        for issue in issues:
+            agent = issue.get("agent", "unknown")
+            if agent not in issues_by_agent:
+                issues_by_agent[agent] = []
+            issues_by_agent[agent].append(issue)
+        
+        for agent, agent_issues in issues_by_agent.items():
+            agent_name = AGENT_CONFIG.get(agent, {}).get("name", agent)
+            console.print(f"[bold]{agent_name}[/bold] ({agent}):")
+            
+            for issue in agent_issues:
+                category = issue.get("category", "unknown")
+                message = issue.get("message", "No message")
+                file_path = issue.get("file", "")
+                
+                if file_path:
+                    console.print(f"  [red]✗[/red] [{category}] {message}")
+                    console.print(f"    File: [cyan]{file_path}[/cyan]")
+                else:
+                    console.print(f"  [red]✗[/red] [{category}] {message}")
+            
+            console.print()
+    
+    # Display warnings
+    if warnings:
+        console.print("[bold yellow]Warnings:[/bold yellow]")
+        console.print()
+        
+        # Group by agent
+        warnings_by_agent = {}
+        for warning in warnings:
+            agent = warning.get("agent", "unknown")
+            if agent not in warnings_by_agent:
+                warnings_by_agent[agent] = []
+            warnings_by_agent[agent].append(warning)
+        
+        for agent, agent_warnings in warnings_by_agent.items():
+            agent_name = AGENT_CONFIG.get(agent, {}).get("name", agent) if agent != "none" else "General"
+            console.print(f"[bold]{agent_name}[/bold] ({agent}):")
+            
+            for warning in agent_warnings:
+                category = warning.get("category", "unknown")
+                message = warning.get("message", "No message")
+                file_path = warning.get("file", "")
+                
+                if file_path:
+                    console.print(f"  [yellow]⚠[/yellow] [{category}] {message}")
+                    console.print(f"    File: [cyan]{file_path}[/cyan]")
+                else:
+                    console.print(f"  [yellow]⚠[/yellow] [{category}] {message}")
+            
+            console.print()
+    
+    # Final status
+    if issues:
+        console.print("[bold red]Validation failed with errors.[/bold red]")
+        console.print("[dim]Fix the errors above and run validation again.[/dim]")
+        raise typer.Exit(1)
+    else:
+        console.print("[bold green]Validation passed with warnings.[/bold green]")
+        console.print("[dim]Consider addressing the warnings above.[/dim]")
 
 def main():
     app()

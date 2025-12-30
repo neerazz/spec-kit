@@ -1,7 +1,17 @@
 from pathlib import Path
 
+# Special "all" option to initialize all agents at once
+ALL_AGENTS_KEY = "all"
+
 # Agent configuration with name, folder, install URL, and CLI tool requirement
 AGENT_CONFIG = {
+    # Special entry for initializing all agents at once
+    "all": {
+        "name": "All Agents",
+        "folder": None,  # Multiple folders
+        "install_url": None,
+        "requires_cli": False,  # No single CLI to check
+    },
     "copilot": {
         "name": "GitHub Copilot",
         "folder": ".github/",

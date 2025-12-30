@@ -1,0 +1,10 @@
+# Missing description field
+
+prompt = """
+This is invalid TOML - no description field.
+
+Run: {SCRIPT}
+
+Arguments: $ARGUMENTS
+"""
+

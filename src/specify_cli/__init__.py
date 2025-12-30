@@ -24,7 +24,10 @@ Or install globally:
     specify init --here
 """
 
-from specify_cli.frontend.cli import main, app
+def main():
+    """Entry point for the CLI."""
+    from specify_cli.frontend.cli import main as cli_main
+    cli_main()
 
 if __name__ == "__main__":
     main()

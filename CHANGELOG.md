@@ -7,6 +7,51 @@ All notable changes to the Specify CLI and templates are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.23] - 2025-12-30
+
+### Added
+
+- **Initialize All Agents at Once**: New `--ai all` option for `specify init` command
+  - Creates a project with ALL supported AI agents configured in a single command
+  - Single download with all 17+ agents pre-configured
+  - No need to run `specify init` multiple times for different agents
+  - Example: `specify init my-project --ai all`
+  - Works with both `--here` and project name arguments
+  - Automatically skips individual agent CLI tool checks when using "all"
+
+- **Agent Configuration Validation**: New `specify validate` command to check all AI agent configurations against standards
+  - Validates directory structure for all detected agents
+  - Checks command file formats (Markdown vs TOML)
+  - Verifies required spec-kit commands are present
+  - Validates context files and placeholders
+  - Ensures format compliance (YAML frontmatter, TOML fields, etc.)
+  - Provides detailed error and warning messages with file paths
+  - Supports validation of all 17+ supported AI agents in a single command
+
+- **Comprehensive Validation Documentation**: Updated `AGENTS.md` with extensive validation guidelines
+  - What gets validated (directory structure, formats, commands, context files)
+  - Validation output examples (success, warnings, errors)
+  - Best practices for running validation
+  - Common validation issues and fixes
+  - Integration with project setup workflow
+
+### Changed
+
+- Enhanced agent configuration detection logic to automatically discover all configured agents
+- Improved error messages to include specific file paths and categories for easier troubleshooting
+- Updated release scripts to generate combined "all" package alongside individual agent packages
+
+### Fixed
+
+- Fixed validation error when "all" agent config has `folder: None`
+
+### Documentation
+
+- Added comprehensive platform-specific installation guides (Windows, macOS, Linux)
+- Added Windows-specific troubleshooting section (PATH issues, SSL errors, execution policy, long paths)
+- Added general troubleshooting for GitHub rate limiting and validation errors
+- Tested and verified Windows installation commands work correctly
+
 ## [0.0.22] - 2025-11-07
 
 - Support for VS Code/Copilot agents, and moving away from prompts to proper agents with hand-offs.

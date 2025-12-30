@@ -6,9 +6,12 @@ set -euo pipefail
 # Usage: .github/workflows/scripts/create-release-packages.sh <version>
 #   Version argument should include leading 'v'.
 #   Optionally set AGENTS and/or SCRIPTS env vars to limit what gets built.
-#     AGENTS  : space or comma separated subset of: claude gemini copilot cursor-agent qwen opencode windsurf codex amp shai bob (default: all)
+#     AGENTS  : space or comma separated subset of: all, claude, gemini, copilot, cursor-agent, qwen, opencode,
+#               windsurf, codex, kilocode, auggie, roo, codebuddy, amp, shai, q, bob, qoder
+#               (default: builds ALL including the combined "all" package)
 #     SCRIPTS : space or comma separated subset of: sh ps (default: both)
 #   Examples:
+#     AGENTS=all $0 v0.2.0          # Build only the combined "all" package
 #     AGENTS=claude SCRIPTS=sh $0 v0.2.0
 #     AGENTS="copilot,gemini" $0 v0.2.0
 #     SCRIPTS=ps $0 v0.2.0
@@ -217,13 +220,91 @@ build_variant() {
     bob)
       mkdir -p "$base_dir/.bob/commands"
       generate_commands bob md "\$ARGUMENTS" "$base_dir/.bob/commands" "$script" ;;
+    all)
+      # Build ALL agents in a single package
+      echo "  Including ALL agents..."
+      
+      # Claude
+      mkdir -p "$base_dir/.claude/commands"
+      generate_commands claude md "\$ARGUMENTS" "$base_dir/.claude/commands" "$script"
+      
+      # Gemini
+      mkdir -p "$base_dir/.gemini/commands"
+      generate_commands gemini toml "{{args}}" "$base_dir/.gemini/commands" "$script"
+      [[ -f agent_templates/gemini/GEMINI.md ]] && cp agent_templates/gemini/GEMINI.md "$base_dir/GEMINI.md"
+      
+      # Copilot
+      mkdir -p "$base_dir/.github/agents"
+      generate_commands copilot agent.md "\$ARGUMENTS" "$base_dir/.github/agents" "$script"
+      generate_copilot_prompts "$base_dir/.github/agents" "$base_dir/.github/prompts"
+      mkdir -p "$base_dir/.vscode"
+      [[ -f templates/vscode-settings.json ]] && cp templates/vscode-settings.json "$base_dir/.vscode/settings.json"
+      
+      # Cursor
+      mkdir -p "$base_dir/.cursor/commands"
+      generate_commands cursor-agent md "\$ARGUMENTS" "$base_dir/.cursor/commands" "$script"
+      
+      # Qwen
+      mkdir -p "$base_dir/.qwen/commands"
+      generate_commands qwen toml "{{args}}" "$base_dir/.qwen/commands" "$script"
+      [[ -f agent_templates/qwen/QWEN.md ]] && cp agent_templates/qwen/QWEN.md "$base_dir/QWEN.md"
+      
+      # opencode
+      mkdir -p "$base_dir/.opencode/command"
+      generate_commands opencode md "\$ARGUMENTS" "$base_dir/.opencode/command" "$script"
+      
+      # Windsurf
+      mkdir -p "$base_dir/.windsurf/workflows"
+      generate_commands windsurf md "\$ARGUMENTS" "$base_dir/.windsurf/workflows" "$script"
+      
+      # Codex
+      mkdir -p "$base_dir/.codex/prompts"
+      generate_commands codex md "\$ARGUMENTS" "$base_dir/.codex/prompts" "$script"
+      
+      # Kilo Code
+      mkdir -p "$base_dir/.kilocode/workflows"
+      generate_commands kilocode md "\$ARGUMENTS" "$base_dir/.kilocode/workflows" "$script"
+      
+      # Auggie
+      mkdir -p "$base_dir/.augment/commands"
+      generate_commands auggie md "\$ARGUMENTS" "$base_dir/.augment/commands" "$script"
+      
+      # Roo
+      mkdir -p "$base_dir/.roo/commands"
+      generate_commands roo md "\$ARGUMENTS" "$base_dir/.roo/commands" "$script"
+      
+      # CodeBuddy
+      mkdir -p "$base_dir/.codebuddy/commands"
+      generate_commands codebuddy md "\$ARGUMENTS" "$base_dir/.codebuddy/commands" "$script"
+      
+      # Qoder
+      mkdir -p "$base_dir/.qoder/commands"
+      generate_commands qoder md "\$ARGUMENTS" "$base_dir/.qoder/commands" "$script"
+      
+      # Amp
+      mkdir -p "$base_dir/.agents/commands"
+      generate_commands amp md "\$ARGUMENTS" "$base_dir/.agents/commands" "$script"
+      
+      # SHAI
+      mkdir -p "$base_dir/.shai/commands"
+      generate_commands shai md "\$ARGUMENTS" "$base_dir/.shai/commands" "$script"
+      
+      # Amazon Q
+      mkdir -p "$base_dir/.amazonq/prompts"
+      generate_commands q md "\$ARGUMENTS" "$base_dir/.amazonq/prompts" "$script"
+      
+      # IBM Bob
+      mkdir -p "$base_dir/.bob/commands"
+      generate_commands bob md "\$ARGUMENTS" "$base_dir/.bob/commands" "$script"
+      ;;
   esac
   ( cd "$base_dir" && zip -r "../spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip" . )
   echo "Created $GENRELEASES_DIR/spec-kit-template-${agent}-${script}-${NEW_VERSION}.zip"
 }
 
 # Determine agent list
-ALL_AGENTS=(claude gemini copilot cursor-agent qwen opencode windsurf codex kilocode auggie roo codebuddy amp shai q bob qoder)
+# Note: "all" creates a single package with ALL agents combined
+ALL_AGENTS=(all claude gemini copilot cursor-agent qwen opencode windsurf codex kilocode auggie roo codebuddy amp shai q bob qoder)
 ALL_SCRIPTS=(sh ps)
 
 norm_list() {

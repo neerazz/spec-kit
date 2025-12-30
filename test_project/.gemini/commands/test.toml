@@ -1,0 +1,10 @@
+description = "Test command for Gemini"
+
+prompt = """
+This is a test command for Gemini.
+
+Run: {SCRIPT}
+
+Arguments: {{args}}
+"""
+

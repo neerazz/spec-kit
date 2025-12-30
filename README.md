@@ -44,44 +44,195 @@ Spec-Driven Development **flips the script** on traditional software development
 
 ### 1. Install Specify CLI
 
-Choose your preferred installation method:
+Choose your preferred installation method based on your operating system:
 
-#### Option 1: Persistent Installation (Recommended)
+<details>
+<summary><b>🪟 Windows Installation</b></summary>
 
-Install once and use everywhere:
+#### Step 1: Install uv (Python package manager)
 
-```bash
-uv tool install specify-cli --from git+https://github.com/neerazz/spec-kit.git
+Open **PowerShell** and run:
+
+```powershell
+# Install uv using the official installer
+irm https://astral.sh/uv/install.ps1 | iex
 ```
 
-Then use the tool directly:
+#### Step 2: Add uv to PATH
+
+After installation, add uv to your PATH (or restart your terminal):
+
+```powershell
+$env:Path = "C:\Users\$env:USERNAME\.local\bin;$env:Path"
+```
+
+Verify uv is installed:
+
+```powershell
+uv --version
+```
+
+#### Step 3: Install Specify CLI
+
+```powershell
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+```
+
+#### Step 4: Use Specify
+
+```powershell
+# Check installed tools
+specify check
+
+# Create new project with ALL AI agents at once
+specify init my-project --ai all
+
+# Or create project with a specific agent
+specify init my-project --ai claude
+
+# Initialize with PowerShell scripts (recommended for Windows)
+specify init my-project --ai claude --script ps
+
+# Initialize in current directory
+specify init . --ai claude --script ps
+
+# Validate all agent configurations
+specify validate
+```
+
+#### Upgrade on Windows
+
+```powershell
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
+```
+
+</details>
+
+<details>
+<summary><b>🍎 macOS Installation</b></summary>
+
+#### Step 1: Install uv
 
 ```bash
-# Create new project
-specify init <PROJECT_NAME>
+# Using the official installer
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-# Or initialize in existing project
-specify init . --ai claude
-# or
-specify init --here --ai claude
+Or via **Homebrew**:
+
+```bash
+brew install uv
+```
+
+#### Step 2: Install Specify CLI
+
+```bash
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+```
+
+#### Step 3: Use Specify
+
+```bash
+# Create new project with ALL AI agents at once
+specify init my-project --ai all
+
+# Or create project with a specific agent
+specify init my-project --ai claude
 
 # Check installed tools
 specify check
 ```
 
+</details>
+
+<details>
+<summary><b>🐧 Linux Installation</b></summary>
+
+#### Step 1: Install uv
+
+```bash
+# Using the official installer
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Or via your package manager:
+
+```bash
+# Arch Linux
+pacman -S uv
+
+# Alpine
+apk add uv
+```
+
+#### Step 2: Install Specify CLI
+
+```bash
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+```
+
+#### Step 3: Use Specify
+
+```bash
+# Create new project with ALL AI agents at once
+specify init my-project --ai all
+
+# Or create project with a specific agent
+specify init my-project --ai claude
+
+# Check installed tools
+specify check
+```
+
+</details>
+
+<details open>
+<summary><b>📋 Quick Reference (All Platforms)</b></summary>
+
+#### Persistent Installation (Recommended)
+
+Install once and use everywhere:
+
+```bash
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+```
+
+Then use the tool directly:
+
+```bash
+# Create new project with ALL AI agents at once
+specify init <PROJECT_NAME> --ai all
+
+# Or create project with a specific agent
+specify init <PROJECT_NAME> --ai claude
+
+# Or initialize in existing project
+specify init . --ai all
+# or
+specify init --here --ai claude
+
+# Check installed tools
+specify check
+
+# Validate all agent configurations
+specify validate
+```
+
 To upgrade Specify, see the [Upgrade Guide](./docs/upgrade.md) for detailed instructions. Quick upgrade:
 
 ```bash
-uv tool install specify-cli --force --from git+https://github.com/neerazz/spec-kit.git
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
 ```
 
-#### Option 2: One-time Usage
+#### One-time Usage (No Installation)
 
 Run directly without installing:
 
 ```bash
-uvx --from git+https://github.com/neerazz/spec-kit.git specify init <PROJECT_NAME>
+uvx --from git+https://github.com/github/spec-kit.git specify init <PROJECT_NAME>
 ```
+
+</details>
 
 **Benefits of persistent installation:**
 
@@ -169,30 +320,35 @@ The `specify` command supports the following options:
 
 ### Commands
 
-| Command | Description                                                                                                                                             |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `init`  | Initialize a new Specify project from the latest template                                                                                               |
-| `check` | Check for installed tools (`git`, `claude`, `gemini`, `code`/`code-insiders`, `cursor-agent`, `windsurf`, `qwen`, `opencode`, `codex`, `shai`, `qoder`) |
+| Command    | Description                                                                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `init`     | Initialize a new Specify project from the latest template                                                                                               |
+| `check`    | Check for installed tools (`git`, `claude`, `gemini`, `code`/`code-insiders`, `cursor-agent`, `windsurf`, `qwen`, `opencode`, `codex`, `shai`, `qoder`) |
+| `validate` | Validate all AI agent configurations in a project against standards                                                                                     |
+| `version`  | Display version and system information                                                                                                                  |
 
 ### `specify init` Arguments & Options
 
-| Argument/Option        | Type     | Description                                                                                                                                                                                  |
-| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `<project-name>`       | Argument | Name for your new project directory (optional if using `--here`, or use `.` for current directory)                                                                                           |
-| `--ai`                 | Option   | AI assistant to use: `claude`, `gemini`, `copilot`, `cursor-agent`, `qwen`, `opencode`, `codex`, `windsurf`, `kilocode`, `auggie`, `roo`, `codebuddy`, `amp`, `shai`, `q`, `bob`, or `qoder` |
-| `--script`             | Option   | Script variant to use: `sh` (bash/zsh) or `ps` (PowerShell)                                                                                                                                  |
-| `--ignore-agent-tools` | Flag     | Skip checks for AI agent tools like Claude Code                                                                                                                                              |
-| `--no-git`             | Flag     | Skip git repository initialization                                                                                                                                                           |
-| `--here`               | Flag     | Initialize project in the current directory instead of creating a new one                                                                                                                    |
-| `--force`              | Flag     | Force merge/overwrite when initializing in current directory (skip confirmation)                                                                                                             |
-| `--skip-tls`           | Flag     | Skip SSL/TLS verification (not recommended)                                                                                                                                                  |
-| `--debug`              | Flag     | Enable detailed debug output for troubleshooting                                                                                                                                             |
-| `--github-token`       | Option   | GitHub token for API requests (or set GH_TOKEN/GITHUB_TOKEN env variable)                                                                                                                    |
+| Argument/Option        | Type     | Description                                                                                                                                                                                                    |
+| ---------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `<project-name>`       | Argument | Name for your new project directory (optional if using `--here`, or use `.` for current directory)                                                                                                             |
+| `--ai`                 | Option   | AI assistant: `all` (ALL agents), `claude`, `gemini`, `copilot`, `cursor-agent`, `qwen`, `opencode`, `codex`, `windsurf`, `kilocode`, `auggie`, `roo`, `codebuddy`, `amp`, `shai`, `q`, `bob`, or `qoder` |
+| `--script`             | Option   | Script variant to use: `sh` (bash/zsh) or `ps` (PowerShell)                                                                                                                                                    |
+| `--ignore-agent-tools` | Flag     | Skip checks for AI agent tools like Claude Code                                                                                                                                                                |
+| `--no-git`             | Flag     | Skip git repository initialization                                                                                                                                                                             |
+| `--here`               | Flag     | Initialize project in the current directory instead of creating a new one                                                                                                                                      |
+| `--force`              | Flag     | Force merge/overwrite when initializing in current directory (skip confirmation)                                                                                                                               |
+| `--skip-tls`           | Flag     | Skip SSL/TLS verification (not recommended)                                                                                                                                                                    |
+| `--debug`              | Flag     | Enable detailed debug output for troubleshooting                                                                                                                                                               |
+| `--github-token`       | Option   | GitHub token for API requests (or set GH_TOKEN/GITHUB_TOKEN env variable)                                                                                                                                      |
 
 ### Examples
 
 ```bash
-# Basic project initialization
+# Initialize with ALL AI agents at once (recommended for multi-agent teams)
+specify init my-project --ai all
+
+# Basic project initialization (interactive agent selection)
 specify init my-project
 
 # Initialize with specific AI assistant
@@ -219,6 +375,9 @@ specify init my-project --ai bob
 # Initialize with PowerShell scripts (Windows/cross-platform)
 specify init my-project --ai copilot --script ps
 
+# Initialize ALL agents in current directory
+specify init . --ai all
+
 # Initialize in current directory
 specify init . --ai copilot
 # or use the --here flag
@@ -240,6 +399,12 @@ specify init my-project --ai claude --github-token ghp_your_token_here
 
 # Check system requirements
 specify check
+
+# Validate all agent configurations in the current project
+specify validate
+
+# Validate a specific project directory
+specify validate ./my-project
 ```
 
 ### Available Slash Commands
@@ -362,20 +527,26 @@ specify init --here --force
 You will be prompted to select the AI agent you are using. You can also proactively specify it directly in the terminal:
 
 ```bash
+# Initialize with ALL agents at once (recommended)
+specify init <project_name> --ai all
+
+# Or choose a specific agent
 specify init <project_name> --ai claude
 specify init <project_name> --ai gemini
 specify init <project_name> --ai copilot
 
 # Or in current directory:
+specify init . --ai all
 specify init . --ai claude
 specify init . --ai codex
 
 # or use --here flag
+specify init --here --ai all
 specify init --here --ai claude
 specify init --here --ai codex
 
 # Force merge into a non-empty current directory
-specify init . --force --ai claude
+specify init . --force --ai all
 
 # or
 specify init --here --force --ai claude
@@ -619,6 +790,98 @@ Once the implementation is complete, test the application and resolve any runtim
 
 ## 🔍 Troubleshooting
 
+### Windows-Specific Issues
+
+<details>
+<summary><b>'specify' is not recognized as a command</b></summary>
+
+If you get an error that `specify` is not recognized after installation:
+
+1. **Restart your terminal** - The PATH may not have updated yet.
+
+2. **Check if uv tools are in PATH**:
+   ```powershell
+   # Check where uv installs tools
+   uv tool dir
+   
+   # Add to PATH if needed (run in PowerShell as Administrator)
+   $toolPath = (uv tool dir)
+   [Environment]::SetEnvironmentVariable("Path", $env:Path + ";$toolPath", "User")
+   ```
+
+3. **Verify installation**:
+   ```powershell
+   uv tool list
+   ```
+
+</details>
+
+<details>
+<summary><b>SSL/TLS certificate errors on Windows</b></summary>
+
+If you encounter SSL certificate verification errors:
+
+```powershell
+# Use the --skip-tls flag (not recommended for production)
+specify init my-project --ai all --skip-tls
+
+# Or set a GitHub token to avoid rate limiting
+$env:GITHUB_TOKEN = "ghp_your_token_here"
+specify init my-project --ai all
+```
+
+</details>
+
+<details>
+<summary><b>PowerShell execution policy errors</b></summary>
+
+If scripts won't run due to execution policy:
+
+```powershell
+# Check current policy
+Get-ExecutionPolicy
+
+# Set to allow local scripts (run as Administrator)
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+</details>
+
+<details>
+<summary><b>Long path issues on Windows</b></summary>
+
+If you encounter "path too long" errors:
+
+1. Enable long paths in Windows (requires admin):
+   ```powershell
+   # Run in PowerShell as Administrator
+   New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -PropertyType DWORD -Force
+   ```
+
+2. Enable long paths in Git:
+   ```powershell
+   git config --global core.longpaths true
+   ```
+
+</details>
+
+### macOS/Linux Issues
+
+<details>
+<summary><b>Permission denied errors</b></summary>
+
+If you get permission errors when running scripts:
+
+```bash
+# Make scripts executable
+chmod +x .specify/scripts/bash/*.sh
+
+# Or run the specify command to fix permissions
+specify init . --here --force
+```
+
+</details>
+
 ### Git Credential Manager on Linux
 
 If you're having issues with Git authentication on Linux, you can install Git Credential Manager:
@@ -635,6 +898,46 @@ git config --global credential.helper manager
 echo "Cleaning up..."
 rm gcm-linux_amd64.2.6.1.deb
 ```
+
+### General Issues
+
+<details>
+<summary><b>GitHub API rate limiting</b></summary>
+
+If you see rate limit errors when downloading templates:
+
+```bash
+# Set a GitHub token (get one from https://github.com/settings/tokens)
+# Linux/macOS:
+export GITHUB_TOKEN="ghp_your_token_here"
+
+# Windows PowerShell:
+$env:GITHUB_TOKEN = "ghp_your_token_here"
+
+# Or pass directly to the command:
+specify init my-project --ai all --github-token ghp_your_token_here
+```
+
+</details>
+
+<details>
+<summary><b>Validation errors after initialization</b></summary>
+
+If `specify validate` reports errors:
+
+```bash
+# Check what's wrong
+specify validate --verbose
+
+# Common fixes:
+# 1. Re-initialize to fix missing files
+specify init . --here --force --ai all
+
+# 2. Check file permissions (Linux/macOS)
+chmod -R u+rw .claude/ .gemini/ .cursor/
+```
+
+</details>
 
 ## 👥 Maintainers
 

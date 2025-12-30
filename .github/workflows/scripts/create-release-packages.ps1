@@ -14,7 +14,8 @@
 
 .PARAMETER Agents
     Comma or space separated subset of agents to build (default: all)
-    Valid agents: claude, gemini, copilot, cursor-agent, qwen, opencode, windsurf, codex, kilocode, auggie, roo, codebuddy, amp, q, bob, qoder
+    Valid agents: all, claude, gemini, copilot, cursor-agent, qwen, opencode, windsurf, codex, kilocode, auggie, roo, codebuddy, amp, q, bob, qoder, shai
+    Note: "all" creates a combined package with ALL agents
 
 .PARAMETER Scripts
     Comma or space separated subset of script types to build (default: both)
@@ -22,6 +23,9 @@
 
 .EXAMPLE
     .\create-release-packages.ps1 -Version v0.2.0
+
+.EXAMPLE
+    .\create-release-packages.ps1 -Version v0.2.0 -Agents all -Scripts sh
 
 .EXAMPLE
     .\create-release-packages.ps1 -Version v0.2.0 -Agents claude,copilot -Scripts sh
@@ -347,6 +351,95 @@ function Build-Variant {
             $cmdDir = Join-Path $baseDir ".qoder/commands"
             Generate-Commands -Agent 'qoder' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
         }
+        'shai' {
+            $cmdDir = Join-Path $baseDir ".shai/commands"
+            Generate-Commands -Agent 'shai' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+        }
+        'all' {
+            # Build ALL agents in a single package
+            Write-Host "  Including ALL agents..."
+            
+            # Claude
+            $cmdDir = Join-Path $baseDir ".claude/commands"
+            Generate-Commands -Agent 'claude' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Gemini
+            $cmdDir = Join-Path $baseDir ".gemini/commands"
+            Generate-Commands -Agent 'gemini' -Extension 'toml' -ArgFormat '{{args}}' -OutputDir $cmdDir -ScriptVariant $Script
+            if (Test-Path "agent_templates/gemini/GEMINI.md") {
+                Copy-Item -Path "agent_templates/gemini/GEMINI.md" -Destination (Join-Path $baseDir "GEMINI.md")
+            }
+            
+            # Copilot
+            $agentsDir = Join-Path $baseDir ".github/agents"
+            Generate-Commands -Agent 'copilot' -Extension 'agent.md' -ArgFormat '$ARGUMENTS' -OutputDir $agentsDir -ScriptVariant $Script
+            $promptsDir = Join-Path $baseDir ".github/prompts"
+            Generate-CopilotPrompts -AgentsDir $agentsDir -PromptsDir $promptsDir
+            $vscodeDir = Join-Path $baseDir ".vscode"
+            New-Item -ItemType Directory -Path $vscodeDir -Force | Out-Null
+            if (Test-Path "templates/vscode-settings.json") {
+                Copy-Item -Path "templates/vscode-settings.json" -Destination (Join-Path $vscodeDir "settings.json")
+            }
+            
+            # Cursor
+            $cmdDir = Join-Path $baseDir ".cursor/commands"
+            Generate-Commands -Agent 'cursor-agent' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Qwen
+            $cmdDir = Join-Path $baseDir ".qwen/commands"
+            Generate-Commands -Agent 'qwen' -Extension 'toml' -ArgFormat '{{args}}' -OutputDir $cmdDir -ScriptVariant $Script
+            if (Test-Path "agent_templates/qwen/QWEN.md") {
+                Copy-Item -Path "agent_templates/qwen/QWEN.md" -Destination (Join-Path $baseDir "QWEN.md")
+            }
+            
+            # opencode
+            $cmdDir = Join-Path $baseDir ".opencode/command"
+            Generate-Commands -Agent 'opencode' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Windsurf
+            $cmdDir = Join-Path $baseDir ".windsurf/workflows"
+            Generate-Commands -Agent 'windsurf' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Codex
+            $cmdDir = Join-Path $baseDir ".codex/prompts"
+            Generate-Commands -Agent 'codex' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Kilo Code
+            $cmdDir = Join-Path $baseDir ".kilocode/workflows"
+            Generate-Commands -Agent 'kilocode' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Auggie
+            $cmdDir = Join-Path $baseDir ".augment/commands"
+            Generate-Commands -Agent 'auggie' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Roo
+            $cmdDir = Join-Path $baseDir ".roo/commands"
+            Generate-Commands -Agent 'roo' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # CodeBuddy
+            $cmdDir = Join-Path $baseDir ".codebuddy/commands"
+            Generate-Commands -Agent 'codebuddy' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Qoder
+            $cmdDir = Join-Path $baseDir ".qoder/commands"
+            Generate-Commands -Agent 'qoder' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Amp
+            $cmdDir = Join-Path $baseDir ".agents/commands"
+            Generate-Commands -Agent 'amp' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # SHAI
+            $cmdDir = Join-Path $baseDir ".shai/commands"
+            Generate-Commands -Agent 'shai' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # Amazon Q
+            $cmdDir = Join-Path $baseDir ".amazonq/prompts"
+            Generate-Commands -Agent 'q' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+            
+            # IBM Bob
+            $cmdDir = Join-Path $baseDir ".bob/commands"
+            Generate-Commands -Agent 'bob' -Extension 'md' -ArgFormat '$ARGUMENTS' -OutputDir $cmdDir -ScriptVariant $Script
+        }
     }
     
     # Create zip archive
@@ -356,7 +449,8 @@ function Build-Variant {
 }
 
 # Define all agents and scripts
-$AllAgents = @('claude', 'gemini', 'copilot', 'cursor-agent', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'q', 'bob', 'qoder')
+# Note: "all" creates a single package with ALL agents combined
+$AllAgents = @('all', 'claude', 'gemini', 'copilot', 'cursor-agent', 'qwen', 'opencode', 'windsurf', 'codex', 'kilocode', 'auggie', 'roo', 'codebuddy', 'amp', 'shai', 'q', 'bob', 'qoder')
 $AllScripts = @('sh', 'ps')
 
 function Normalize-List {
