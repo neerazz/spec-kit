@@ -60,13 +60,27 @@ irm https://astral.sh/uv/install.ps1 | iex
 
 #### Step 2: Add uv to PATH
 
-After installation, add uv to your PATH (or restart your terminal):
+After installation, you need to add uv to your PATH. Choose one option:
+
+**Option A: Restart your terminal** (easiest)
+
+Just close and reopen PowerShell - the PATH is usually updated automatically.
+
+**Option B: Add to PATH for current session only**
 
 ```powershell
 $env:Path = "C:\Users\$env:USERNAME\.local\bin;$env:Path"
 ```
 
-Verify uv is installed:
+**Option C: Add to PATH permanently** (recommended)
+
+```powershell
+[Environment]::SetEnvironmentVariable("Path", "C:\Users\$env:USERNAME\.local\bin;" + [Environment]::GetEnvironmentVariable("Path", "User"), "User")
+```
+
+Then restart your terminal or run Option B for the current session.
+
+**Verify uv is installed:**
 
 ```powershell
 uv --version
@@ -200,15 +214,18 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 Then use the tool directly:
 
 ```bash
-# Create new project with ALL AI agents at once
+# Create new project - detects installed agents automatically (default)
+specify init <PROJECT_NAME>
+
+# Explicitly use ALL detected agents
 specify init <PROJECT_NAME> --ai all
 
 # Or create project with a specific agent
 specify init <PROJECT_NAME> --ai claude
 
-# Or initialize in existing project
+# Or initialize in existing project (with all detected agents)
 specify init . --ai all
-# or
+# or with a specific agent
 specify init --here --ai claude
 
 # Check installed tools

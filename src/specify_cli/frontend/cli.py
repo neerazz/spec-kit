@@ -15,7 +15,7 @@ from datetime import datetime
 
 from specify_cli.data.constants import AGENT_CONFIG, SCRIPT_TYPE_CHOICES, ALL_AGENTS_KEY
 from specify_cli.frontend.ui import show_banner, console, select_with_arrows, StepTracker
-from specify_cli.backend.system import check_tool, ensure_executable_scripts
+from specify_cli.backend.system import check_tool, ensure_executable_scripts, detect_installed_agents
 from specify_cli.backend.git import is_git_repo, init_git_repo
 from specify_cli.backend.project import download_and_extract_template
 from specify_cli.backend.github import _github_auth_headers
@@ -159,8 +159,8 @@ def init(
         ai_choices = {key: config["name"] for key, config in AGENT_CONFIG.items()}
         selected_ai = select_with_arrows(
             ai_choices,
-            "Choose your AI assistant:",
-            "copilot"
+            "Choose your AI assistant (or 'all' for all detected agents):",
+            "all"  # Default to "all" - installs templates for all detected agents
         )
 
     # Skip agent tool checks when initializing all agents (no single tool to check)
@@ -195,8 +195,22 @@ def init(
         else:
             selected_script = default_script
 
+    # Determine which agents to install
+    agents_to_install = []
+    if selected_ai == ALL_AGENTS_KEY:
+        # Detect installed agents
+        agents_to_install = detect_installed_agents(AGENT_CONFIG)
+        if not agents_to_install:
+            console.print("[yellow]No AI agents detected. Installing copilot as default.[/yellow]")
+            agents_to_install = ["copilot"]
+        console.print(f"[cyan]Detected agents:[/cyan] {', '.join(agents_to_install)}")
+    else:
+        agents_to_install = [selected_ai]
+    
     console.print(f"[cyan]Selected AI assistant:[/cyan] {selected_ai}")
     console.print(f"[cyan]Selected script type:[/cyan] {selected_script}")
+    if selected_ai == ALL_AGENTS_KEY:
+        console.print(f"[cyan]Installing templates for:[/cyan] {len(agents_to_install)} agent(s)")
 
     tracker = StepTracker("Initialize Specify Project")
 
@@ -205,15 +219,25 @@ def init(
     tracker.add("precheck", "Check required tools")
     tracker.complete("precheck", "ok")
     tracker.add("ai-select", "Select AI assistant")
-    tracker.complete("ai-select", f"{selected_ai}")
+    tracker.complete("ai-select", f"{selected_ai}" if selected_ai != ALL_AGENTS_KEY else f"all ({len(agents_to_install)} detected)")
     tracker.add("script-select", "Select script type")
     tracker.complete("script-select", selected_script)
+    
+    # Add tracker steps for each agent if "all" is selected
+    if selected_ai == ALL_AGENTS_KEY:
+        for agent in agents_to_install:
+            tracker.add(f"agent-{agent}", f"Install {AGENT_CONFIG[agent]['name']}")
+    else:
+        for key, label in [
+            ("fetch", "Fetch latest release"),
+            ("download", "Download template"),
+            ("extract", "Extract template"),
+            ("zip-list", "Archive contents"),
+            ("extracted-summary", "Extraction summary"),
+        ]:
+            tracker.add(key, label)
+    
     for key, label in [
-        ("fetch", "Fetch latest release"),
-        ("download", "Download template"),
-        ("extract", "Extract template"),
-        ("zip-list", "Archive contents"),
-        ("extracted-summary", "Extraction summary"),
         ("chmod", "Ensure scripts executable"),
         ("cleanup", "Cleanup"),
         ("git", "Initialize git repository"),
@@ -235,7 +259,25 @@ def init(
             local_ssl_context = ssl_context if verify else False
             local_client = httpx.Client(verify=local_ssl_context)
 
-            download_and_extract_template(project_path, selected_ai, selected_script, here, verbose=False, tracker=tracker, client=local_client, debug=debug, github_token=github_token)
+            if selected_ai == ALL_AGENTS_KEY:
+                # Download and extract templates for each detected agent
+                for i, agent in enumerate(agents_to_install):
+                    tracker.start(f"agent-{agent}")
+                    try:
+                        # For first agent, create the project structure; for subsequent ones, merge
+                        is_merge = (i > 0) or here
+                        download_and_extract_template(
+                            project_path, agent, selected_script, is_merge, 
+                            verbose=False, tracker=None, client=local_client, 
+                            debug=debug, github_token=github_token
+                        )
+                        tracker.complete(f"agent-{agent}", "installed")
+                    except Exception as e:
+                        tracker.error(f"agent-{agent}", str(e)[:30])
+                        if debug:
+                            console.print(f"[yellow]Warning: Failed to install {agent}: {e}[/yellow]")
+            else:
+                download_and_extract_template(project_path, selected_ai, selected_script, here, verbose=False, tracker=tracker, client=local_client, debug=debug, github_token=github_token)
 
             ensure_executable_scripts(project_path, tracker=tracker)
 

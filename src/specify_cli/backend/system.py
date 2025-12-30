@@ -57,6 +57,34 @@ def check_tool(tool: str, tracker = None) -> bool:
 
     return found
 
+
+def detect_installed_agents(agent_config: dict) -> list[str]:
+    """Detect which AI agents are installed on the system.
+    
+    Args:
+        agent_config: Dictionary of agent configurations from constants
+        
+    Returns:
+        List of agent keys that are installed or IDE-based (always available)
+    """
+    installed = []
+    
+    for agent_key, config in agent_config.items():
+        # Skip the "all" meta-option
+        if agent_key == "all":
+            continue
+            
+        # IDE-based agents are always "available" (no CLI to check)
+        if not config.get("requires_cli", False):
+            installed.append(agent_key)
+            continue
+        
+        # Check if CLI-based agent is installed
+        if check_tool(agent_key):
+            installed.append(agent_key)
+    
+    return installed
+
 def ensure_executable_scripts(project_path: Path, tracker = None) -> None:
     """Ensure POSIX .sh scripts under .specify/scripts (recursively) have execute bits (no-op on Windows)."""
     if os.name == "nt":

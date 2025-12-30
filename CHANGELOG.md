@@ -12,12 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **Initialize All Agents at Once**: New `--ai all` option for `specify init` command
-  - Creates a project with ALL supported AI agents configured in a single command
-  - Single download with all 17+ agents pre-configured
-  - No need to run `specify init` multiple times for different agents
+  - **Now the default selection** - `--ai all` is selected by default when no agent specified
+  - **Smart detection** - Automatically detects which AI agents are installed on your system
+  - Downloads and installs templates only for detected agents (no wasted downloads)
+  - IDE-based agents (Copilot, Cursor, Windsurf, etc.) are always included
+  - CLI-based agents (Claude, Gemini, Codex, etc.) only included if CLI is installed
+  - Shows progress for each agent being installed
   - Example: `specify init my-project --ai all`
   - Works with both `--here` and project name arguments
-  - Automatically skips individual agent CLI tool checks when using "all"
 
 - **Agent Configuration Validation**: New `specify validate` command to check all AI agent configurations against standards
   - Validates directory structure for all detected agents
